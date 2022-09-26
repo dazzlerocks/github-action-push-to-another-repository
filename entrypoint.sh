@@ -65,15 +65,14 @@ echo "[+] Cloning destination git repository $DESTINATION_REPOSITORY_NAME"
 git config --global user.email "$USER_EMAIL"
 git config --global user.name "$USER_NAME"
 
+TARGET_BRANCH_EXISTS=true
+
 {
 	git clone --single-branch --depth 1 --branch "$TARGET_BRANCH" "$GIT_CMD_REPOSITORY" "$CLONE_DIR"
 } || {
-	echo "::error::Could not clone the destination repository. Command:"
-	echo "::error::git clone --single-branch --branch $TARGET_BRANCH $GIT_CMD_REPOSITORY $CLONE_DIR"
-	echo "::error::(Note that if they exist USER_NAME and API_TOKEN is redacted by GitHub)"
-	echo "::error::Please verify that the target repository exist AND that it contains the destination branch name, and is accesible by the API_TOKEN_GITHUB OR SSH_DEPLOY_KEY"
-	exit 1
-
+	echo "Target branch doesn't exist, fetching main branch"
+  	git clone --single-branch --depth 1 "$GIT_CMD_REPOSITORY" "$CLONE_DIR"
+  	TARGET_BRANCH_EXISTS=false
 }
 ls -la "$CLONE_DIR"
 
@@ -133,6 +132,11 @@ echo "[+] Set directory is safe ($CLONE_DIR)"
 # Related to https://github.com/cpina/github-action-push-to-another-repository/issues/64 and https://github.com/cpina/github-action-push-to-another-repository/issues/64
 # TODO: review before releasing it as a version
 git config --global --add safe.directory "$CLONE_DIR"
+
+if [ "$TARGET_BRANCH_EXISTS" = false ] ; then
+  echo "Creating branch: $TARGET_BRANCH"
+  git checkout -b "$TARGET_BRANCH"
+fi
 
 echo "[+] Adding git commit"
 git add .
